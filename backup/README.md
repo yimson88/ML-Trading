@@ -153,174 +153,18 @@ on. Two ways to work around it:
    which lets you walk-forward train on years of 15-minute data instead of
    60 days.
 
-## Telegram alerts (especially ML-Validated trades)
-
-Every SMC setup can now be pushed straight to Telegram with a clean,
-formatted card — market, bias cascade, entry/SL/TP, R:R, and a prominent ML
-verdict block:
-
-- ✅ **ML-VALIDATED SIGNAL** — win-probability shown, sent whenever the ML
-  layer confirms a setup.
-- ⚠️ **SMC SETUP — FILTERED BY ML** — only sent if you turn off "Only send
-  ML-Validated setups" in the sidebar.
-- ⏳ **NO ML MODEL YET** — shown if a rule-based setup fires before you've
-  trained a model for that market.
-
-### Setup
-
-1. Message **@BotFather** on Telegram, run `/newbot`, and copy the bot token
-   it gives you.
-2. Get your **Chat ID**: message your new bot once, then visit
-   `https://api.telegram.org/bot<TOKEN>/getUpdates` in a browser — your
-   numeric chat ID is in the JSON response. For a **channel**, add the bot
-   as an admin of the channel and use the channel's `@username` or its
-   numeric ID (also visible via `getUpdates` after posting in the channel).
-3. Either:
-   - Paste the Bot Token / Chat ID / Channel ID into the sidebar's
-     **📲 Telegram Alerts** section each session, or
-   - (Recommended) create `.streamlit/secrets.toml` in the project root so
-     they load automatically:
-     ```toml
-     TELEGRAM_TOKEN = "123456789:AAExampleTokenFromBotFather"
-     TELEGRAM_CHAT_ID = "987654321"
-     TELEGRAM_CHANNEL_ID = "@my_signals_channel"
-     ```
-     Environment variables with the same names also work as a fallback.
-4. Check **Enable Telegram alerts**, click **📨 Send Telegram test message**
-   to confirm delivery, then leave it running — it will push a message
-   automatically whenever a new (deduplicated) signal appears, without
-   spamming the same setup twice.
-
-Both your personal chat and a channel can receive alerts at the same time —
-just fill in both fields; leave Channel ID blank to only send to your chat.
-
-## Position Size Calculator & Trading Journal
-
-Two new tabs sit at the front of the app, ahead of the charts, so they're one
-click away whenever a signal is live:
-
-### 🧮 Lot Calculator
-- Shows your **Current Account Balance** — dynamic, computed as
-  `Starting Balance + sum of Realized P/L from every trade you've marked
-  Closed in the journal`. It is not a static number you set once; it moves
-  every time you log an outcome.
-- When a live SMC setup exists for the selected market, Entry/SL/TP and
-  direction auto-fill from it. Otherwise, fill them in manually for any
-  hypothetical trade.
-- Handles pip-value conversion correctly across pair types: direct USD-quote
-  pairs (EURUSD, GBPUSD, AUDUSD, NZDUSD, XAUUSD, BTCUSD), USD-as-base pairs
-  (USDJPY, USDCAD, USDCHF — converted using the pair's own live price), and
-  cross pairs (EURJPY, GBPJPY, EURAUD — converted via a fetched USDJPY/AUDUSD
-  rate). Contract size defaults are typical CFD conventions (100,000 for FX,
-  100 oz for gold, 1 BTC for crypto) — **confirm these against your own
-  broker's contract specifications** and override them in "Advanced: Pip
-  Value Settings" if they differ, or just type in the exact pip value your
-  cTrader ticket shows.
-- Outputs the recommended lot size (floored to 0.01 lot steps so you never
-  round up into more risk than intended), stop distance in pips, risk
-  amount, and potential profit/loss/R:R if a TP is set.
-- Shows the 48-candle (12h) close-by deadline for the trade, and a **"Log
-  this trade to journal"** button that records it as Pending in one click.
-
-### 📓 Trading Journal
-- Log trades (from the calculator or manually), then come back once a trade
-  closes and record the outcome (Win/Loss/Breakeven, entered as $ P/L or as
-  an R multiple) — the entry updates in place rather than creating a new
-  record.
-- Pending trades show their **48-candle close-by deadline** and flag in red
-  once it's passed, as a reminder to check cTrader.
-- Full history table, CSV export, an equity curve of closed trades, and a
-  delete option for correcting mistaken entries.
-- Everything persists in `data/trading_journal.csv` and
-  `data/journal_settings.json` — safe across app restarts, not tied to a
-  browser session.
-
-The Backtest tab's "Initial balance" is intentionally left untouched — that
-remains a separate, fixed parameter for historical strategy simulation and
-does not mix with your live journal balance.
-
-## Enforcing a 48-candle (15m) trade timeout on cTrader
-
-cTrader's manual trading UI has no built-in "auto-close after N candles"
-setting for an already-open position — the "Expiry" field you'll see only
-applies to a **pending order** before it's filled (Good Till Cancelled /
-Good Till Date), not to a live position. There are two practical ways to
-enforce your 48-candle (= 12 hour) rule:
-
-**1. Manual (no coding, works today)**
-48 × 15m = 12 hours. The Trading Journal above now computes and shows a
-"Close By" deadline for every pending trade (Date Logged + 12h) and flags it
-once passed — use that as your reminder to open cTrader and close the
-position manually if neither SL nor TP has hit.
-
-**2. Automated, via cTrader Automate (cBot / cAlgo, C#)**
-If you want it enforced automatically, cTrader's algo-trading feature
-(cAlgo, similar in spirit to an MT5 EA but written in C#) can do this. A
-minimal cBot:
-
-```csharp
-using cAlgo.API;
-
-namespace cAlgo.Robots
-{
-    [Robot(TimeZone = TimeZones.UTC, AccessRights = AccessRights.FullAccess)]
-    public class MaxHoldTimeExit : Robot
-    {
-        [Parameter("Max Hold Bars (15m candles)", DefaultValue = 48)]
-        public int MaxHoldBars { get; set; }
-
-        [Parameter("Label filter (blank = all positions)", DefaultValue = "")]
-        public string LabelFilter { get; set; }
-
-        protected override void OnBar()
-        {
-            int currentBarIndex = Bars.Count - 1;
-
-            foreach (var position in Positions)
-            {
-                if (position.SymbolName != SymbolName)
-                    continue;
-                if (!string.IsNullOrEmpty(LabelFilter) && position.Label != LabelFilter)
-                    continue;
-
-                int entryBarIndex = Bars.GetIndexByTime(position.EntryTime);
-                int barsHeld = currentBarIndex - entryBarIndex;
-
-                if (barsHeld >= MaxHoldBars)
-                {
-                    ClosePosition(position);
-                    Print($"Closed {position.Label} ({position.TradeType}) after {barsHeld} bars.");
-                }
-            }
-        }
-    }
-}
-```
-
-Attach it to a 15-minute chart for the symbol you're trading; it counts
-actual closed 15m bars since each position's entry (robust across weekend
-gaps, unlike a plain 12-hour timer) and closes anything that reaches 48.
-Test on a demo account first. If you'd rather not write/compile a cBot
-yourself, third-party marketplaces (e.g. ClickAlgo) sell a ready-made
-"Position Expiry Timer" cBot that does the same thing with no coding.
-
 ## Project structure
 
 ```
 .
-├── app.py                  # Streamlit app: SMC engine + ML confidence layer + Lot Calculator + Journal (run this)
+├── app.py                  # Streamlit app: SMC engine + ML confidence layer (run this)
 ├── ml_engine.py             # All ML logic: indicators, features, labeling,
 │                            # walk-forward training, persistence, live scoring
-├── trading_tools.py         # Lot sizing math + CSV-backed trading journal (no Streamlit dependency)
 ├── train_all_models.py      # CLI: batch walk-forward train + persist + report
 ├── requirements.txt
-├── .streamlit/secrets.toml  # Optional: your Telegram token/chat/channel IDs (create this yourself, not committed)
 ├── models/                  # Saved XGBoost model bundles (.joblib), one per pair
 ├── reports/                 # Feature importance + walk-forward OOS CSVs
-└── data/
-    ├── history/              # Optional broker/MT5 CSV overrides (see above)
-    ├── trading_journal.csv   # Your logged trades (created on first use)
-    └── journal_settings.json # Your starting balance (created on first use)
+└── data/history/            # Optional broker/MT5 CSV overrides (see above)
 ```
 
 ## Notes and honest caveats
