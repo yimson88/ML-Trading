@@ -759,9 +759,9 @@ with st.sidebar:
     daily_start = st.date_input("Daily data start date", value=pd.to_datetime("2020-01-01"))
 
     st.subheader("SMC Settings")
-    swing_len = st.selectbox("Swing sensitivity", [2, 3, 4, 5], index=1)
+    swing_len = st.selectbox("Swing sensitivity", [2, 3, 4, 5], index=0)
     risk_reward = st.selectbox("Risk-to-reward target", [1.5, 2.0, 2.5, 3.0, 4.0], index=2)
-    atr_mult = st.selectbox("ATR safety buffer", [0.5, 1.0, 1.5, 2.0], index=1)
+    atr_mult = st.selectbox("ATR safety buffer", [0.5, 1.0, 1.5, 2.0], index=2)
     strict_mode = st.checkbox("Strict mode: require Daily + 1H alignment", value=True)
     h1_days = st.selectbox(
         "1H history window (days)", [90, 180, 365, 730], index=1,
@@ -772,14 +772,14 @@ with st.sidebar:
 
     st.divider()
     st.subheader("Cameroon Trading Window")
-    enforce_session = st.checkbox("Only allow signals during my watch time", value=True)
+    enforce_session = st.checkbox("Only allow signals during my watch time", value=False)
     session_start = st.selectbox("Start watching from", list(range(0, 24)), index=6, format_func=lambda x: f"{x:02d}:00 Cameroon time")
     session_end = st.selectbox("Stop watching at", list(range(1, 25)), index=21, format_func=lambda x: f"{x if x < 24 else 0:02d}:00 Cameroon time")
     st.caption("Default plan: watch for signals from 06:00 to 22:00 Cameroon time.")
 
     st.divider()
     st.subheader("Alerts")
-    auto_refresh = st.checkbox("Auto-refresh", value=False)
+    auto_refresh = st.checkbox("Auto-refresh", value=True)
     refresh_minutes = st.selectbox("Refresh every", [1, 3, 5, 10, 15], index=2)
     desktop_alert = st.checkbox("Desktop notification", value=True)
     sound_alert = st.checkbox("Sound alert", value=True)
@@ -796,8 +796,8 @@ with st.sidebar:
     st.subheader("Backtest Settings")
     run_backtest = st.checkbox("Run backtest", value=True)
     initial_balance = st.number_input("Initial balance", min_value=100.0, value=10000.0, step=100.0)
-    risk_percent = st.selectbox("Risk per trade (%)", [0.25, 0.5, 1.0, 2.0], index=1)
-    max_hold = st.selectbox("Max hold time on 15m candles", [8, 16, 32, 48, 96], index=2)
+    risk_percent = st.selectbox("Risk per trade (%)", [0.25, 0.5, 1.0, 2.0], index=2)
+    max_hold = st.selectbox("Max hold time on 15m candles", [8, 16, 32, 48, 96], index=3)
 
     st.divider()
     st.subheader("🤖 ML Confidence Layer (XGBoost)")
@@ -806,11 +806,11 @@ with st.sidebar:
         "market's own signal history. Filters use ADX (trend strength) and Bollinger "
         "Band Width (volatility/squeeze avoidance) on top of the ML score."
     )
-    ml_conf_threshold = st.slider("Minimum ML win-probability to confirm a setup", 0.50, 0.95, 0.58, 0.01)
-    ml_min_adx = st.slider("ADX filter: minimum trend strength", 0, 40, 18, 1)
+    ml_conf_threshold = st.slider("Minimum ML win-probability to confirm a setup", 0.50, 0.95, 0.50, 0.01)
+    ml_min_adx = st.slider("ADX filter: minimum trend strength", 0, 40, 16, 1)
     ml_min_bbw_pct = st.slider("BB Width filter: minimum volatility percentile", 0.0, 0.90, 0.15, 0.05)
-    ml_horizon = st.selectbox("Label horizon for training (15m candles)", [16, 24, 32, 48, 64], index=2)
-    ml_n_splits = st.selectbox("Walk-forward folds", [3, 4, 5, 6, 8], index=2)
+    ml_horizon = st.selectbox("Label horizon for training (15m candles)", [16, 24, 32, 48, 64], index=3)
+    ml_n_splits = st.selectbox("Walk-forward folds", [3, 4, 5, 6, 8], index=3)
     train_now = st.button("🔁 Train / Update ML Model for this market")
 
     st.divider()
