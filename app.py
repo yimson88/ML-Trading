@@ -816,10 +816,11 @@ with st.sidebar:
     st.divider()
     st.subheader("📲 Telegram Alerts")
     telegram_enabled = True
-    telegram_token = st.text_input("Bot Token", value=TELEGRAM_TOKEN_DEFAULT, type="password")
-    telegram_chat_id = st.text_input("Chat ID", value=TELEGRAM_CHAT_ID_DEFAULT)
-    telegram_channel_id = st.text_input("Channel ID (optional)", value=TELEGRAM_CHANNEL_ID_DEFAULT)
-    telegram_only_ml_confirmed = st.checkbox("Only send ML-Validated setups", value=True)
+    telegram_only_ml_confirmed = True
+    
+    telegram_token = TELEGRAM_TOKEN_DEFAULT
+    telegram_chat_id = TELEGRAM_CHAT_ID_DEFAULT
+    telegram_channel_id = TELEGRAM_CHANNEL_ID_DEFAULT
     st.caption(
         "Tip: put TELEGRAM_TOKEN / TELEGRAM_CHAT_ID / TELEGRAM_CHANNEL_ID in "
         ".streamlit/secrets.toml (or as environment variables) so they load "
