@@ -816,7 +816,7 @@ with st.sidebar:
     st.divider()
     st.subheader("📲 Telegram Alerts")
     telegram_enabled = True
-    telegram_only_ml_confirmed = True
+    telegram_only_ml_confirmed = False
     
     telegram_token = TELEGRAM_TOKEN_DEFAULT
     telegram_chat_id = TELEGRAM_CHAT_ID_DEFAULT
