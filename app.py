@@ -1,4 +1,5 @@
 import os
+import datetime
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -753,10 +754,10 @@ st.caption("Daily = bias | 1H = market structure | 15m = SMC entry trigger | XGB
 # Used for every visitor (main charts + analysis) until someone unlocks
 # the sidebar controls with the password below.
 # -----------------------------
-APP_PASSWORD = "Gre@tness12"  # <-- change this to your own hardcoded password
+APP_PASSWORD = "changeme123"  # <-- change this to your own hardcoded password
 
 DEFAULT_PAIR = list(PAIRS.keys())[0]
-DEFAULT_DAILY_START = pd.to_datetime("2020-01-01")
+DEFAULT_DAILY_START = datetime.date(2020, 1, 1)
 DEFAULT_SWING_LEN = 2
 DEFAULT_RISK_REWARD = 2.5
 DEFAULT_ATR_MULT = 1.5
@@ -934,7 +935,8 @@ if refresh:
     st.cache_data.clear()
 
 try:
-    daily, h1, m15 = load_data(ticker, str(daily_start), pair_name=selected, h1_days=h1_days)
+    daily_start_str = pd.to_datetime(daily_start).strftime("%Y-%m-%d")
+    daily, h1, m15 = load_data(ticker, daily_start_str, pair_name=selected, h1_days=h1_days)
     if daily.empty or h1.empty or m15.empty:
         st.error("Not enough data was returned. Try another market or refresh.")
         st.stop()
