@@ -1,4 +1,3 @@
-
 import os
 import streamlit as st
 import pandas as pd
@@ -749,94 +748,187 @@ def build_telegram_signal_message(symbol, row, risk_reward, bundle):
 st.title("📊 Smart Money Concepts + ML Trading System")
 st.caption("Daily = bias | 1H = market structure | 15m = SMC entry trigger | XGBoost scores every setup's win-probability | Educational strategy testing only")
 
+# -----------------------------
+# DEFAULT SETTINGS
+# Used for every visitor (main charts + analysis) until someone unlocks
+# the sidebar controls with the password below.
+# -----------------------------
+APP_PASSWORD = "Gre@tness12"  # <-- change this to your own hardcoded password
+
+DEFAULT_PAIR = list(PAIRS.keys())[0]
+DEFAULT_DAILY_START = pd.to_datetime("2020-01-01")
+DEFAULT_SWING_LEN = 2
+DEFAULT_RISK_REWARD = 2.5
+DEFAULT_ATR_MULT = 1.5
+DEFAULT_STRICT_MODE = True
+DEFAULT_H1_DAYS = 180
+DEFAULT_ENFORCE_SESSION = False
+DEFAULT_SESSION_START = 6
+DEFAULT_SESSION_END = 22
+DEFAULT_AUTO_REFRESH = True
+DEFAULT_REFRESH_MINUTES = 5
+DEFAULT_DESKTOP_ALERT = True
+DEFAULT_SOUND_ALERT = True
+DEFAULT_RUN_BACKTEST = True
+DEFAULT_INITIAL_BALANCE = 10000.0
+DEFAULT_RISK_PERCENT = 1.0
+DEFAULT_MAX_HOLD = 48
+DEFAULT_ML_CONF_THRESHOLD = 0.50
+DEFAULT_ML_MIN_ADX = 16
+DEFAULT_ML_MIN_BBW_PCT = 0.15
+DEFAULT_ML_HORIZON = 48
+DEFAULT_ML_N_SPLITS = 6
+
+if "controls_unlocked" not in st.session_state:
+    st.session_state["controls_unlocked"] = False
+
 with st.sidebar:
-    st.header("System Controls")
-    selected = st.selectbox("Choose market", list(PAIRS.keys()), index=0)
-    ticker = PAIRS[selected]["ticker"]
-    pip_size = PAIRS[selected]["pip_size"]
-    st.info(PAIRS[selected]["note"])
-
-    daily_start = st.date_input("Daily data start date", value=pd.to_datetime("2020-01-01"))
-
-    st.subheader("SMC Settings")
-    swing_len = st.selectbox("Swing sensitivity", [2, 3, 4, 5], index=0)
-    risk_reward = st.selectbox("Risk-to-reward target", [1.5, 2.0, 2.5, 3.0, 4.0], index=2)
-    atr_mult = st.selectbox("ATR safety buffer", [0.5, 1.0, 1.5, 2.0], index=2)
-    strict_mode = st.checkbox("Strict mode: require Daily + 1H alignment", value=True)
-    h1_days = st.selectbox(
-        "1H history window (days)", [90, 180, 365, 730], index=1,
-        help="Lower = much faster loading/refreshing (fewer 1H candles to process). "
-             "The ML layer only actually uses the last ~60 days anyway (matching the "
-             "15m data window), so 180 days is plenty for most markets."
-    )
-
-    st.divider()
-    st.subheader("Cameroon Trading Window")
-    enforce_session = st.checkbox("Only allow signals during my watch time", value=False)
-    session_start = st.selectbox("Start watching from", list(range(0, 24)), index=6, format_func=lambda x: f"{x:02d}:00 Cameroon time")
-    session_end = st.selectbox("Stop watching at", list(range(1, 25)), index=21, format_func=lambda x: f"{x if x < 24 else 0:02d}:00 Cameroon time")
-    st.caption("Default plan: watch for signals from 06:00 to 22:00 Cameroon time.")
-
-    st.divider()
-    st.subheader("Alerts")
-    auto_refresh = st.checkbox("Auto-refresh", value=True)
-    refresh_minutes = st.selectbox("Refresh every", [1, 3, 5, 10, 15], index=2)
-    desktop_alert = st.checkbox("Desktop notification", value=True)
-    sound_alert = st.checkbox("Sound alert", value=True)
-
-    if auto_refresh:
-        if st_autorefresh is not None:
-            st_autorefresh(interval=refresh_minutes * 60 * 1000, key="smc_auto_refresh")
-        else:
-            st.warning("Install streamlit-autorefresh to use auto-refresh.")
-
-    refresh = st.button("Refresh Analysis")
-
-    st.divider()
-    st.subheader("Backtest Settings")
-    run_backtest = st.checkbox("Run backtest", value=True)
-    initial_balance = st.number_input("Initial balance", min_value=100.0, value=10000.0, step=100.0)
-    risk_percent = st.selectbox("Risk per trade (%)", [0.25, 0.5, 1.0, 2.0], index=2)
-    max_hold = st.selectbox("Max hold time on 15m candles", [8, 16, 32, 48, 96], index=3)
-
-    st.divider()
-    st.subheader("🤖 ML Confidence Layer (XGBoost)")
-    st.caption(
-        "Scores every rule-based SMC setup with a win-probability learned from this "
-        "market's own signal history. Filters use ADX (trend strength) and Bollinger "
-        "Band Width (volatility/squeeze avoidance) on top of the ML score."
-    )
-    ml_conf_threshold = st.slider("Minimum ML win-probability to confirm a setup", 0.50, 0.95, 0.50, 0.01)
-    ml_min_adx = st.slider("ADX filter: minimum trend strength", 0, 40, 16, 1)
-    ml_min_bbw_pct = st.slider("BB Width filter: minimum volatility percentile", 0.0, 0.90, 0.15, 0.05)
-    ml_horizon = st.selectbox("Label horizon for training (15m candles)", [16, 24, 32, 48, 64], index=3)
-    ml_n_splits = st.selectbox("Walk-forward folds", [3, 4, 5, 6, 8], index=3)
-    train_now = st.button("🔁 Train / Update ML Model for this market")
-
-    st.divider()
-    st.subheader("📲 Telegram Alerts")
-    telegram_enabled = True
-    telegram_only_ml_confirmed = False
-    
-    telegram_token = TELEGRAM_TOKEN_DEFAULT
-    telegram_chat_id = TELEGRAM_CHAT_ID_DEFAULT
-    telegram_channel_id = TELEGRAM_CHANNEL_ID_DEFAULT
-    st.caption(
-        "Tip: put TELEGRAM_TOKEN / TELEGRAM_CHAT_ID / TELEGRAM_CHANNEL_ID in "
-        ".streamlit/secrets.toml (or as environment variables) so they load "
-        "here automatically without retyping them each session."
-    )
-    if st.button("📨 Send Telegram test message"):
-        test_msg = (
-            "✅ *Test message*\n"
-            "Your SMC + ML Trading System is connected to Telegram.\n"
-            "If you can read this, alerts are configured correctly."
+    if not st.session_state["controls_unlocked"]:
+        st.header("🔒 Controls Locked")
+        st.caption(
+            f"Charts and analysis below are visible to everyone using the default "
+            f"market ({DEFAULT_PAIR}) and default settings. Enter the password to "
+            "unlock the market picker, risk settings, backtest, ML training, and alerts."
         )
-        test_results = send_telegram_alert(test_msg, telegram_token, [telegram_chat_id, telegram_channel_id])
-        if any(test_results.values()):
-            st.success("Test message sent! Check Telegram.")
-        else:
-            st.error("Failed to send. Double-check your Bot Token and Chat/Channel ID.")
+        pwd_input = st.text_input("Password", type="password", key="controls_password")
+        if st.button("Unlock Controls"):
+            if pwd_input == APP_PASSWORD:
+                st.session_state["controls_unlocked"] = True
+                st.rerun()
+            else:
+                st.error("Incorrect password.")
+
+    if st.session_state["controls_unlocked"]:
+        if st.button("🔓 Lock Controls"):
+            st.session_state["controls_unlocked"] = False
+            st.rerun()
+
+        st.header("System Controls")
+        selected = st.selectbox("Choose market", list(PAIRS.keys()), index=list(PAIRS.keys()).index(DEFAULT_PAIR))
+        ticker = PAIRS[selected]["ticker"]
+        pip_size = PAIRS[selected]["pip_size"]
+        st.info(PAIRS[selected]["note"])
+
+        daily_start = st.date_input("Daily data start date", value=DEFAULT_DAILY_START)
+
+        st.subheader("SMC Settings")
+        swing_len = st.selectbox("Swing sensitivity", [2, 3, 4, 5], index=0)
+        risk_reward = st.selectbox("Risk-to-reward target", [1.5, 2.0, 2.5, 3.0, 4.0], index=2)
+        atr_mult = st.selectbox("ATR safety buffer", [0.5, 1.0, 1.5, 2.0], index=2)
+        strict_mode = st.checkbox("Strict mode: require Daily + 1H alignment", value=True)
+        h1_days = st.selectbox(
+            "1H history window (days)", [90, 180, 365, 730], index=1,
+            help="Lower = much faster loading/refreshing (fewer 1H candles to process). "
+                 "The ML layer only actually uses the last ~60 days anyway (matching the "
+                 "15m data window), so 180 days is plenty for most markets."
+        )
+
+        st.divider()
+        st.subheader("Cameroon Trading Window")
+        enforce_session = st.checkbox("Only allow signals during my watch time", value=False)
+        session_start = st.selectbox("Start watching from", list(range(0, 24)), index=6, format_func=lambda x: f"{x:02d}:00 Cameroon time")
+        session_end = st.selectbox("Stop watching at", list(range(1, 25)), index=21, format_func=lambda x: f"{x if x < 24 else 0:02d}:00 Cameroon time")
+        st.caption("Default plan: watch for signals from 06:00 to 22:00 Cameroon time.")
+
+        st.divider()
+        st.subheader("Alerts")
+        auto_refresh = st.checkbox("Auto-refresh", value=True)
+        refresh_minutes = st.selectbox("Refresh every", [1, 3, 5, 10, 15], index=2)
+        desktop_alert = st.checkbox("Desktop notification", value=True)
+        sound_alert = st.checkbox("Sound alert", value=True)
+
+        if auto_refresh:
+            if st_autorefresh is not None:
+                st_autorefresh(interval=refresh_minutes * 60 * 1000, key="smc_auto_refresh")
+            else:
+                st.warning("Install streamlit-autorefresh to use auto-refresh.")
+
+        refresh = st.button("Refresh Analysis")
+
+        st.divider()
+        st.subheader("Backtest Settings")
+        run_backtest = st.checkbox("Run backtest", value=True)
+        initial_balance = st.number_input("Initial balance", min_value=100.0, value=10000.0, step=100.0)
+        risk_percent = st.selectbox("Risk per trade (%)", [0.25, 0.5, 1.0, 2.0], index=2)
+        max_hold = st.selectbox("Max hold time on 15m candles", [8, 16, 32, 48, 96], index=3)
+
+        st.divider()
+        st.subheader("🤖 ML Confidence Layer (XGBoost)")
+        st.caption(
+            "Scores every rule-based SMC setup with a win-probability learned from this "
+            "market's own signal history. Filters use ADX (trend strength) and Bollinger "
+            "Band Width (volatility/squeeze avoidance) on top of the ML score."
+        )
+        ml_conf_threshold = st.slider("Minimum ML win-probability to confirm a setup", 0.50, 0.95, 0.50, 0.01)
+        ml_min_adx = st.slider("ADX filter: minimum trend strength", 0, 40, 16, 1)
+        ml_min_bbw_pct = st.slider("BB Width filter: minimum volatility percentile", 0.0, 0.90, 0.15, 0.05)
+        ml_horizon = st.selectbox("Label horizon for training (15m candles)", [16, 24, 32, 48, 64], index=3)
+        ml_n_splits = st.selectbox("Walk-forward folds", [3, 4, 5, 6, 8], index=3)
+        train_now = st.button("🔁 Train / Update ML Model for this market")
+
+        st.divider()
+        st.subheader("📲 Telegram Alerts")
+        telegram_enabled = True
+        telegram_only_ml_confirmed = False
+
+        telegram_token = TELEGRAM_TOKEN_DEFAULT
+        telegram_chat_id = TELEGRAM_CHAT_ID_DEFAULT
+        telegram_channel_id = TELEGRAM_CHANNEL_ID_DEFAULT
+        st.caption(
+            "Tip: put TELEGRAM_TOKEN / TELEGRAM_CHAT_ID / TELEGRAM_CHANNEL_ID in "
+            ".streamlit/secrets.toml (or as environment variables) so they load "
+            "here automatically without retyping them each session."
+        )
+        if st.button("📨 Send Telegram test message"):
+            test_msg = (
+                "✅ *Test message*\n"
+                "Your SMC + ML Trading System is connected to Telegram.\n"
+                "If you can read this, alerts are configured correctly."
+            )
+            test_results = send_telegram_alert(test_msg, telegram_token, [telegram_chat_id, telegram_channel_id])
+            if any(test_results.values()):
+                st.success("Test message sent! Check Telegram.")
+            else:
+                st.error("Failed to send. Double-check your Bot Token and Chat/Channel ID.")
+
+    else:
+        # Not unlocked yet: everything below still runs, using sensible
+        # defaults, so charts and analysis stay visible to everyone.
+        selected = DEFAULT_PAIR
+        ticker = PAIRS[selected]["ticker"]
+        pip_size = PAIRS[selected]["pip_size"]
+        daily_start = DEFAULT_DAILY_START
+        swing_len = DEFAULT_SWING_LEN
+        risk_reward = DEFAULT_RISK_REWARD
+        atr_mult = DEFAULT_ATR_MULT
+        strict_mode = DEFAULT_STRICT_MODE
+        h1_days = DEFAULT_H1_DAYS
+        enforce_session = DEFAULT_ENFORCE_SESSION
+        session_start = DEFAULT_SESSION_START
+        session_end = DEFAULT_SESSION_END
+        auto_refresh = DEFAULT_AUTO_REFRESH
+        refresh_minutes = DEFAULT_REFRESH_MINUTES
+        desktop_alert = DEFAULT_DESKTOP_ALERT
+        sound_alert = DEFAULT_SOUND_ALERT
+        refresh = False
+        run_backtest = DEFAULT_RUN_BACKTEST
+        initial_balance = DEFAULT_INITIAL_BALANCE
+        risk_percent = DEFAULT_RISK_PERCENT
+        max_hold = DEFAULT_MAX_HOLD
+        ml_conf_threshold = DEFAULT_ML_CONF_THRESHOLD
+        ml_min_adx = DEFAULT_ML_MIN_ADX
+        ml_min_bbw_pct = DEFAULT_ML_MIN_BBW_PCT
+        ml_horizon = DEFAULT_ML_HORIZON
+        ml_n_splits = DEFAULT_ML_N_SPLITS
+        train_now = False
+        telegram_enabled = True
+        telegram_only_ml_confirmed = False
+        telegram_token = TELEGRAM_TOKEN_DEFAULT
+        telegram_chat_id = TELEGRAM_CHAT_ID_DEFAULT
+        telegram_channel_id = TELEGRAM_CHANNEL_ID_DEFAULT
+
+        if auto_refresh and st_autorefresh is not None:
+            st_autorefresh(interval=refresh_minutes * 60 * 1000, key="smc_auto_refresh")
 
 if refresh:
     st.cache_data.clear()
