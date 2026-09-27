@@ -754,7 +754,7 @@ st.caption("Daily = bias | 1H = market structure | 15m = SMC entry trigger | XGB
 # Used for every visitor (main charts + analysis) until someone unlocks
 # the sidebar controls with the password below.
 # -----------------------------
-APP_PASSWORD = "changeme123"  # <-- change this to your own hardcoded password
+APP_PASSWORD = "Gre@tness12"  # <-- change this to your own hardcoded password
 
 DEFAULT_PAIR = list(PAIRS.keys())[0]
 DEFAULT_DAILY_START = datetime.date(2020, 1, 1)
