@@ -121,7 +121,7 @@ def load_csv_override(pair_name, timeframe):
     return remove_abnormal_prices(raw, max_deviation=0.35)
 
 
-def load_data(ticker, daily_start, pair_name):
+def load_data(ticker, daily_start, pair_name, h1_days=730):
     d_override = load_csv_override(pair_name, "D1")
     h_override = load_csv_override(pair_name, "H1")
     m_override = load_csv_override(pair_name, "M15")
@@ -129,7 +129,7 @@ def load_data(ticker, daily_start, pair_name):
     daily = d_override if d_override is not None and not d_override.empty else clean_yfinance_data(
         yf.download(ticker, start=daily_start, interval="1d", auto_adjust=False, progress=False))
     h1 = h_override if h_override is not None and not h_override.empty else clean_yfinance_data(
-        yf.download(ticker, period="730d", interval="1h", auto_adjust=False, progress=False))
+        yf.download(ticker, period=f"{h1_days}d", interval="1h", auto_adjust=False, progress=False))
     m15 = m_override if m_override is not None and not m_override.empty else clean_yfinance_data(
         yf.download(ticker, period="60d", interval="15m", auto_adjust=False, progress=False))
     return daily, h1, m15

@@ -1101,6 +1101,7 @@ try:
             "N/A" if pd.isna(latest_m15.get("BBW_Percentile", np.nan)) else f"{latest_m15['BBW_Percentile']:.0%}",
         ]
     })
+    plan["Value"] = plan["Value"].map(str)
     st.dataframe(plan, use_container_width=True)
 
     setups = m15[m15["Entry_Signal"].isin(["BUY SMC", "SELL SMC"])].dropna(subset=["Entry", "Suggested_SL", "Suggested_TP"]).tail(20)
@@ -1425,6 +1426,7 @@ try:
                 latest_m15.get("Premium_Discount", "N/A")
             ]
         })
+        zone["Value"] = zone["Value"].map(str)
         st.dataframe(zone, use_container_width=True)
 
     with tab4:

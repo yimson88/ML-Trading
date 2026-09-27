@@ -194,6 +194,95 @@ verdict block:
 Both your personal chat and a channel can receive alerts at the same time —
 just fill in both fields; leave Channel ID blank to only send to your chat.
 
+## Unattended VPS signal engine
+
+The Streamlit dashboard can refresh itself only while a browser session is
+connected. For true unattended Telegram delivery on a VPS, run the separate
+headless worker:
+
+```bash
+python signal_engine.py --loop --interval-minutes 5
+```
+
+That worker runs this same production flow without Streamlit:
+
+```text
+load_data()
+  -> build_smc_system()
+  -> ml_engine.build_ml_dataset()
+  -> ml_engine.score_signals_with_model()
+  -> latest 15m candle
+  -> Telegram
+```
+
+It stores sent-signal state in `data/signal_engine_state.json`, so restarting
+the VPS or service does not resend the latest candle.
+
+Recommended VPS layout:
+
+```text
+mlapp.service           # Streamlit dashboard
+signal-engine.service   # server-side Telegram signal worker
+```
+
+Create a `.env` file in the project root on the VPS:
+
+```bash
+TELEGRAM_TOKEN=123456789:AAExampleTokenFromBotFather
+TELEGRAM_CHAT_ID=987654321
+TELEGRAM_CHANNEL_ID=@my_signals_channel
+
+# Optional worker settings
+SIGNAL_PAIRS=XAUUSD
+SIGNAL_INTERVAL_MINUTES=5
+SIGNAL_ONLY_ML_CONFIRMED=false
+SIGNAL_ML_CONF_THRESHOLD=0.50
+SIGNAL_ML_MIN_ADX=16
+SIGNAL_ML_MIN_BBW_PCT=0.15
+SIGNAL_STRICT_MODE=true
+SIGNAL_ENFORCE_SESSION=false
+SIGNAL_SESSION_START=6
+SIGNAL_SESSION_END=22
+```
+
+Copy and edit the included systemd templates:
+
+```bash
+sudo cp systemd/mlapp.service /etc/systemd/system/mlapp.service
+sudo cp systemd/signal-engine.service /etc/systemd/system/signal-engine.service
+sudo nano /etc/systemd/system/mlapp.service
+sudo nano /etc/systemd/system/signal-engine.service
+```
+
+Replace `YOUR_VPS_USER` and `/home/YOUR_VPS_USER/ML-Trading` with your real
+Linux username and project path, then enable both services:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now mlapp.service
+sudo systemctl enable --now signal-engine.service
+```
+
+Check logs:
+
+```bash
+journalctl -u signal-engine.service -f
+journalctl -u mlapp.service -f
+```
+
+You can also run one manual check before enabling systemd:
+
+```bash
+python signal_engine.py --pair XAUUSD
+```
+
+Use `--only-ml-confirmed` if you want Telegram to send only ML-confirmed
+setups:
+
+```bash
+python signal_engine.py --loop --interval-minutes 5 --only-ml-confirmed
+```
+
 ## Position Size Calculator & Trading Journal
 
 Two new tabs sit at the front of the app, ahead of the charts, so they're one
