@@ -1,0 +1,16 @@
+[Unit]
+Description=Yimson ML Summary JSON API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=YOUR_VPS_USER
+WorkingDirectory=/home/YOUR_VPS_USER/ML-Trading
+EnvironmentFile=-/home/YOUR_VPS_USER/ML-Trading/.env
+ExecStart=/home/YOUR_VPS_USER/ML-Trading/venv/bin/uvicorn ml_summary_api:app --host 127.0.0.1 --port 8601
+Restart=always
+RestartSec=20
+
+[Install]
+WantedBy=multi-user.target
