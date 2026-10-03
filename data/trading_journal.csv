@@ -1,0 +1,2 @@
+Trade ID,Date Logged,Market,Direction,Entry,SL,TP,Lot Size,Risk Amount,Risk Percent,ML Probability,ML Verdict,Status,Outcome,Exit Price,Realized PL,R Multiple,Notes,Date Closed
+1,2026-09-27 08:02,BTCUSD,BUY SMC,84766.0625,84451.828125,85551.6484375,0.31,100.0,1.0,0.9025,ML-Confirmed,Pending,,,,,,

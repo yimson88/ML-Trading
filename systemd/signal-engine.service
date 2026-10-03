@@ -5,10 +5,10 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=YOUR_VPS_USER
-WorkingDirectory=/home/YOUR_VPS_USER/ML-Trading
-EnvironmentFile=-/home/YOUR_VPS_USER/ML-Trading/.env
-ExecStart=/home/YOUR_VPS_USER/ML-Trading/venv/bin/python signal_engine.py --loop --interval-minutes 5
+User=root
+WorkingDirectory=/opt/mlapp/app
+EnvironmentFile=-/opt/mlapp/app/.env
+ExecStart=/opt/mlapp/app/venv/bin/python signal_engine.py --loop --interval-minutes 5
 Restart=always
 RestartSec=20
 

@@ -756,7 +756,7 @@ st.caption("Daily = bias | 1H = market structure | 15m = SMC entry trigger | XGB
 # -----------------------------
 APP_PASSWORD = "Gre@tness12"  # <-- change this to your own hardcoded password
 
-DEFAULT_PAIR = list(PAIRS.keys())[11]
+DEFAULT_PAIR = list(PAIRS.keys())[0]
 DEFAULT_DAILY_START = datetime.date(2020, 1, 1)
 DEFAULT_SWING_LEN = 2
 DEFAULT_RISK_REWARD = 2.5

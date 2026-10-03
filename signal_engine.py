@@ -1,3 +1,4 @@
+
 """
 signal_engine.py
 ================
@@ -23,7 +24,7 @@ import ml_engine
 from train_all_models import PAIRS, build_smc_system, load_data
 
 
-DEFAULT_PAIR = "XAUUSD"
+DEFAULT_PAIR = "EURUSD"
 DEFAULT_DAILY_START = "2020-01-01"
 DEFAULT_SWING_LEN = 2
 DEFAULT_RISK_REWARD = 2.5
@@ -175,14 +176,14 @@ def build_telegram_signal_message(symbol, row, risk_reward, bundle):
 
     if not has_model:
         header_tag = "SMC SETUP - NO ML MODEL YET"
-        verdict_block = "No ML model trained yet for this market."
+        verdict_block = "⏳ No ML model trained yet for this market."
     elif ml_taken:
-        header_tag = "ML-VALIDATED SIGNAL"
-        verdict_block = f"*ML VALIDATED*\nWin Probability: *{proba:.1%}*" if has_proba else "*ML VALIDATED*"
+        header_tag = "✅ ML-VALIDATED SIGNAL"
+        verdict_block = f"✅ *ML VALIDATED*\n🎯 Win Probability: *{proba:.1%}*" if has_proba else "✅ *ML VALIDATED*"
     else:
         header_tag = "SMC SETUP - FILTERED BY ML"
         proba_txt = f"{proba:.1%}" if has_proba else "N/A"
-        verdict_block = f"*Filtered by ML* (win probability {proba_txt})\nReason: {row.get('ML_Filter_Reason', 'n/a')}"
+        verdict_block = f"⚠️ *Filtered by ML* (win probability {proba_txt})\nReason: {row.get('ML_Filter_Reason', 'n/a')}"
 
     bbw_pct = row.get("BBW_Percentile", np.nan)
     bbw_pct_str = "N/A" if (bbw_pct is None or (isinstance(bbw_pct, float) and np.isnan(bbw_pct))) else f"{bbw_pct:.0%}"
@@ -191,25 +192,25 @@ def build_telegram_signal_message(symbol, row, risk_reward, bundle):
         f"*{side} SIGNAL*",
         f"_{header_tag}_",
         "--------------------",
-        f"*{symbol}* | SMC + ML XGBoost",
+        f"📊 *{symbol}* | SMC + ML XGBoost",
         "",
-        "*Bias Cascade*",
+        "🧭 *Bias Cascade*",
         f"Daily `{row.get('Daily_Bias', 'N/A')}` | 1H `{row.get('H1_Structure', 'N/A')}` | 15m `{row.get('Structure', 'N/A')}`",
         "",
-        "*Trade Plan*",
+        "🎯 *Trade Plan*",
         f"Entry: `{_fmt_price(row.get('Entry'))}`",
         f"SL: `{_fmt_price(row.get('Suggested_SL'))}`",
         f"TP: `{_fmt_price(row.get('Suggested_TP'))}`",
         f"R:R: `{risk_reward}:1`",
         "",
-        "*ML Confidence Layer*",
+        "🤖 *ML Confidence Layer*",
         verdict_block,
         f"ADX (15m): `{_fmt_price(row.get('ADX_14'), 1)}` | BB Width %ile: `{bbw_pct_str}`",
         "",
-        "*SMC Confluence*",
+        "🧩 *SMC Confluence*",
         f"{row.get('SMC_Reason', 'N/A')}",
         "",
-        f"{row.get('Cameroon_Time', 'N/A')} Cameroon Time",
+        f"🕒 {row.get('Cameroon_Time', 'N/A')} Cameroon Time",
         "Educational signal only - not financial advice.",
     ]
     return "\n".join(lines)

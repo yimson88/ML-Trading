@@ -5,10 +5,10 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=YOUR_VPS_USER
-WorkingDirectory=/home/YOUR_VPS_USER/ML-Trading
-EnvironmentFile=-/home/YOUR_VPS_USER/ML-Trading/.env
-ExecStart=/home/YOUR_VPS_USER/ML-Trading/venv/bin/streamlit run app.py --server.address 0.0.0.0 --server.port 8501
+User=root
+WorkingDirectory=/opt/mlapp/app
+EnvironmentFile=-/opt/mlapp/app/.env
+ExecStart=/opt/mlapp/app/venv/bin/streamlit run app.py --server.address 0.0.0.0 --server.port 8501
 Restart=always
 RestartSec=20
 
